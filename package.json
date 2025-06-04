@@ -3,6 +3,13 @@
   "displayName": "TabOutX",
   "description": "Tab out of quotes, brackets and more",
   "version": "0.0.1",
+  "publisher": "Gaspard Ruan",
+  "homepage": "https://github.com/gaspardruan/taboutx",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gaspardruan/taboutx.git"
+  },
+  "icon": "assets/logo.png",
   "engines": {
     "vscode": "^1.100.0"
   },

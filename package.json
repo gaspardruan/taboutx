@@ -9,15 +9,107 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "taboutx.helloWorld",
-        "title": "Hello World"
+        "command": "taboutx.toggle",
+        "title": "Toggle TabOutX"
       }
-    ]
+    ],
+    "keybindings": [
+      {
+        "command": "taboutx",
+        "key": "tab",
+        "mac": "tab",
+        "when": "editorTextFocus && !suggestWidgetVisible && !inlineSuggestionVisible  && !editorHasMultipleSelections && !inSnippetMode"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "TabOutX configuration",
+      "properties": {
+        "taboutx.disableByDefault": {
+          "type": "boolean",
+          "default": false,
+          "description": "Disable the TabOutX extension by default"
+        },
+        "taboutx.pairsToTabOutFrom": {
+          "type": "array",
+          "description": "Sets of opening and closing pairs to be able to tab out from",
+          "default": [
+            {
+              "open": "[",
+              "close": "]"
+            },
+            {
+              "open": "{",
+              "close": "}"
+            },
+            {
+              "open": "(",
+              "close": ")"
+            },
+            {
+              "open": "'",
+              "close": "'"
+            },
+            {
+              "open": "\"",
+              "close": "\""
+            },
+            {
+              "open": ":",
+              "close": ":"
+            },
+            {
+              "open": "=",
+              "close": "="
+            },
+            {
+              "open": ">",
+              "close": ">"
+            },
+            {
+              "open": "<",
+              "close": "<"
+            },
+            {
+              "open": ".",
+              "close": "."
+            },
+            {
+              "open": "`",
+              "close": "`"
+            },
+            {
+              "open": ";",
+              "close": ";"
+            }
+          ],
+          "items": {
+            "type": "object",
+            "required": [
+              "open",
+              "close"
+            ],
+            "properties": {
+              "open": {
+                "type": "string",
+                "description": "The opening  of the pair (e.g. for a pair of square brackets, '[')"
+              },
+              "close": {
+                "type": "string",
+                "description": "The closing  of the pair (e.g. for a pair of square brackets, ']')"
+              }
+            }
+          }
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "pnpm run compile",

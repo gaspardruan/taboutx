@@ -37,12 +37,17 @@
     ],
     "configuration": {
       "type": "object",
-      "title": "TabOutX configuration",
+      "title": "TabOutX",
       "properties": {
         "taboutx.disableByDefault": {
           "type": "boolean",
           "default": false,
           "description": "Disable the TabOutX extension by default"
+        },
+        "taboutx.enableMultilineMode": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to tab out of the pair in multiple lines"
         },
         "taboutx.pairsToTabOutFrom": {
           "type": "array",

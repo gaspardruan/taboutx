@@ -6,16 +6,17 @@ interface Pair {
 }
 
 export function activate(context: vscode.ExtensionContext) {
+  const config = vscode.workspace.getConfiguration("taboutx");
+
   // active or not
-  const isDisabled = vscode.workspace
-    .getConfiguration("taboutx")
-    .get("disableByDefault") as boolean;
+  const isDisabled = config.get("disableByDefault") as boolean;
   context.workspaceState.update("taboutx-active", !isDisabled);
 
+  // mode
+  const isMultiline = config.get("enableMultilineMode") as boolean;
+
   // load pairs
-  const pairs = vscode.workspace
-    .getConfiguration("taboutx")
-    .get<Pair[]>("pairsToTabOutFrom")!;
+  const pairs = config.get<Pair[]>("pairsToTabOutFrom")!;
   const pariSet = new Set<string>();
   pairs.forEach((p) => {
     pariSet.add(p.open);
@@ -46,8 +47,25 @@ export function activate(context: vscode.ExtensionContext) {
     const pos = editor.selection.active;
     const line = editor.document.lineAt(pos.line);
 
-    // line begin or end
-    if (pos.character === 0 || pos.character === line.range.end.character) {
+    // line begin
+    if (pos.character === 0) {
+      vscode.commands.executeCommand("tab");
+      return;
+    }
+
+    // line end
+    if (pos.character === line.range.end.character) {
+      if (!isMultiline) {
+        vscode.commands.executeCommand("tab");
+        return;
+      }
+
+      const res = findNextPrintChar(editor, pos.line + 1);
+      if (res && pariSet.has(res.char)) {
+        editor.selection = new vscode.Selection(res.pos, res.pos);
+        return;
+      }
+
       vscode.commands.executeCommand("tab");
       return;
     }
@@ -96,6 +114,21 @@ function findFirstMatchingPairChar(text: string, set: Set<string>): number {
     }
   }
   return -1;
+}
+
+function findNextPrintChar(
+  editor: vscode.TextEditor,
+  startLine: number
+): { char: string; pos: vscode.Position } | null {
+  const doc = editor.document;
+  const totalLineNum = doc.lineCount;
+  for (let l = startLine; l < totalLineNum; l++) {
+    const match = doc.lineAt(l).text.match(/\S/);
+    if (match && match.index !== undefined) {
+      return { char: match[0], pos: new vscode.Position(l, match.index + 1) };
+    }
+  }
+  return null;
 }
 
 export function deactivate() {}

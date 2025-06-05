@@ -49,6 +49,11 @@
           "default": true,
           "description": "Whether to tab out of the pair in multiple lines"
         },
+        "taboutx.skipBlankChar": {
+          "type": "boolean",
+          "default": true,
+          "description": "Skip the blank character between cursor and specified pair"
+        },
         "taboutx.pairsToTabOutFrom": {
           "type": "array",
           "description": "Sets of opening and closing pairs to be able to tab out from",
@@ -146,7 +151,7 @@
     "semi": true,
     "tabWidth": 2,
     "endOfLine": "lf",
-    "printWidth": 80,
+    "printWidth": 100,
     "singleQuote": false,
     "trailingComma": "es5"
   }

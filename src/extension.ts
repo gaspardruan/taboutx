@@ -15,6 +15,9 @@ export function activate(context: vscode.ExtensionContext) {
   // mode
   const isMultiline = config.get("enableMultilineMode") as boolean;
 
+  // skip blank char
+  const skipBlank = config.get("skipBlankChar") as boolean;
+
   // load pairs
   const pairs = config.get<Pair[]>("pairsToTabOutFrom")!;
   const openSet = new Set<string>();
@@ -56,7 +59,10 @@ export function activate(context: vscode.ExtensionContext) {
     }
 
     // line end
-    if (pos.character === line.range.end.character) {
+    if (
+      pos.character === line.range.end.character ||
+      line.text.substring(pos.character).trim() === ""
+    ) {
       if (!isMultiline) {
         vscode.commands.executeCommand("tab");
         return;
@@ -72,9 +78,16 @@ export function activate(context: vscode.ExtensionContext) {
       return;
     }
 
+    // right first not blank char is special
+    const match = line.text.substring(pos.character).match(/\S/);
+    if (skipBlank && match && match.index !== undefined && pairSet.has(match[0])) {
+      rightFrom(editor, pos, match.index + 1);
+      return;
+    }
+
     // right char is special
     const rightChar = line.text[pos.character];
-    if (pairSet.has(rightChar)) {
+    if (!skipBlank && pairSet.has(rightChar)) {
       rightFrom(editor, pos, 1);
       return;
     }
@@ -86,7 +99,7 @@ export function activate(context: vscode.ExtensionContext) {
       return;
     }
 
-    // right substr doesn't have special char
+    // right substr doesn't include special char
     const rightSubStr = line.text.substring(pos.character);
     const index = findFirstMatchingPairChar(rightSubStr, pairSet);
     if (index === -1) {

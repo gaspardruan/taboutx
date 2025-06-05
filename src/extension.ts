@@ -17,19 +17,21 @@ export function activate(context: vscode.ExtensionContext) {
 
   // load pairs
   const pairs = config.get<Pair[]>("pairsToTabOutFrom")!;
-  const pariSet = new Set<string>();
+  const openSet = new Set<string>();
+  const closeSet = new Set<string>();
+  const pairSet = new Set<string>();
   pairs.forEach((p) => {
-    pariSet.add(p.open);
-    pariSet.add(p.close);
+    openSet.add(p.open);
+    closeSet.add(p.close);
+    pairSet.add(p.open);
+    pairSet.add(p.close);
   });
 
   // toggle command
   const toggle = vscode.commands.registerCommand("taboutx.toggle", () => {
     const isActive = context.workspaceState.get("taboutx-active");
     context.workspaceState.update("taboutx-active", !isActive);
-    vscode.window.showInformationMessage(
-      `TabOutX is ${!isActive ? "activated" : "deactivated"}.`
-    );
+    vscode.window.showInformationMessage(`TabOutX is ${!isActive ? "activated" : "deactivated"}.`);
   });
   context.subscriptions.push(toggle);
 
@@ -61,7 +63,7 @@ export function activate(context: vscode.ExtensionContext) {
       }
 
       const res = findNextPrintChar(editor, pos.line + 1);
-      if (res && pariSet.has(res.char)) {
+      if (res && pairSet.has(res.char)) {
         editor.selection = new vscode.Selection(res.pos, res.pos);
         return;
       }
@@ -72,37 +74,39 @@ export function activate(context: vscode.ExtensionContext) {
 
     // right char is special
     const rightChar = line.text[pos.character];
-    if (pariSet.has(rightChar)) {
+    if (pairSet.has(rightChar)) {
       rightFrom(editor, pos, 1);
       return;
     }
 
     // left char not special
     const leftChar = line.text[pos.character - 1];
-    if (!pariSet.has(leftChar)) {
+    if (!pairSet.has(leftChar)) {
       vscode.commands.executeCommand("tab");
       return;
     }
 
     // right substr doesn't have special char
     const rightSubStr = line.text.substring(pos.character);
-    const index = findFirstMatchingPairChar(rightSubStr, pariSet);
+    const index = findFirstMatchingPairChar(rightSubStr, pairSet);
     if (index === -1) {
       vscode.commands.executeCommand("tab");
       return;
     }
 
-    // jump to the right of the special char
-    rightFrom(editor, pos, index + 1);
+    // open: jump to right
+    // close: jump to left
+    const matchChar = rightSubStr[index];
+    if (closeSet.has(matchChar)) {
+      rightFrom(editor, pos, index);
+    } else {
+      rightFrom(editor, pos, index + 1);
+    }
   });
   context.subscriptions.push(taboutx);
 }
 
-function rightFrom(
-  editor: vscode.TextEditor,
-  pos: vscode.Position,
-  offset: number
-) {
+function rightFrom(editor: vscode.TextEditor, pos: vscode.Position, offset: number) {
   const nextPos = pos.translate(0, offset);
   editor.selection = new vscode.Selection(nextPos, nextPos);
 }

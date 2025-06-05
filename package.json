@@ -141,5 +141,13 @@
     "typescript": "^5.8.3",
     "@vscode/test-cli": "^0.0.10",
     "@vscode/test-electron": "^2.5.2"
+  },
+  "prettier": {
+    "semi": true,
+    "tabWidth": 2,
+    "endOfLine": "lf",
+    "printWidth": 80,
+    "singleQuote": false,
+    "trailingComma": "es5"
   }
 }

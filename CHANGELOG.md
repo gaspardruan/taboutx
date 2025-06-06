@@ -23,3 +23,9 @@ All notable changes to the "taboutx" extension will be documented in this file.
 ### Fixed
 
 - When a special char is followed by cursor, jump to the right of next open char, and left of the next close char.
+
+## [0.3.0] - 2025-06-06
+
+### Added
+
+- Config to tab out of paiss backward.

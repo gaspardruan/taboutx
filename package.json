@@ -31,7 +31,11 @@
       {
         "command": "taboutx",
         "key": "tab",
-        "mac": "tab",
+        "when": "editorTextFocus && !suggestWidgetVisible && !inlineSuggestionVisible  && !editorHasMultipleSelections && !inSnippetMode"
+      },
+      {
+        "command": "taboutxBack",
+        "key": "shift+tab",
         "when": "editorTextFocus && !suggestWidgetVisible && !inlineSuggestionVisible  && !editorHasMultipleSelections && !inSnippetMode"
       }
     ],
@@ -53,6 +57,11 @@
           "type": "boolean",
           "default": true,
           "description": "Skip the blank character between cursor and specified pair"
+        },
+        "taboutx.enableTaboutBackward": {
+          "type": "boolean",
+          "default": false,
+          "description": "Wheter to tab out backward on shift+tab"
         },
         "taboutx.pairsToTabOutFrom": {
           "type": "array",

@@ -56,7 +56,7 @@ export function activate(context: vscode.ExtensionContext) {
     const line = editor.document.lineAt(pos.line);
 
     // line begin
-    if (pos.character === 0) {
+    if (pos.character === 0 || atLineHead(line.text, pos.character)) {
       vscode.commands.executeCommand("tab");
       return;
     }

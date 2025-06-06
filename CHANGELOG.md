@@ -29,3 +29,9 @@ All notable changes to the "taboutx" extension will be documented in this file.
 ### Added
 
 - Config to tab out of paiss backward.
+
+## [0.3.1] - 2025-06-07
+
+### Fixed
+
+- When at the beginning of a line, tab to indent;

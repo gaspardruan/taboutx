@@ -35,3 +35,9 @@ All notable changes to the "taboutx" extension will be documented in this file.
 ### Fixed
 
 - When at the beginning of a line, tab to indent;
+
+## [0.3.2] - 2025-06-011
+
+## Added
+
+- Config to support multichar pairs like <div> and </div>.

@@ -1,3 +1,4 @@
+import { reverse } from "dns";
 import * as vscode from "vscode";
 
 interface Pair {
@@ -23,14 +24,29 @@ export function activate(context: vscode.ExtensionContext) {
 
   // load pairs
   const pairs = config.get<Pair[]>("pairsToTabOutFrom")!;
+  const lenSet = new Set<number>();
+  pairs.forEach((p) => {
+    lenSet.add(p.open.length);
+    lenSet.add(p.close.length);
+  });
+  const lenArr = Array.from(lenSet);
+  lenArr.sort((a, b) => b - a);
+
+  const pairMap = new Map<number, Set<string>>();
+  lenArr.forEach((len) => pairMap.set(len, new Set()));
+
   const openSet = new Set<string>();
   const closeSet = new Set<string>();
-  const pairSet = new Set<string>();
   pairs.forEach((p) => {
     openSet.add(p.open);
     closeSet.add(p.close);
-    pairSet.add(p.open);
-    pairSet.add(p.close);
+    pairMap.get(p.open.length)!.add(p.open);
+    pairMap.get(p.close.length)!.add(p.close);
+  });
+
+  const pairArr: string[] = [];
+  pairMap.forEach((v) => {
+    pairArr.push(...v);
   });
 
   // toggle command
@@ -68,45 +84,46 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      return gotoNextLinePair(editor, pairSet, pos.line + 1);
+      return gotoNextLinePair(editor, pairMap, pos.line + 1);
     }
 
     // right first not blank char is special
     const rightSubStr = line.text.substring(pos.character);
     let index = findFirstPrintChar(rightSubStr);
-    if (skipBlank && index !== -1 && pairSet.has(rightSubStr[index])) {
-      moveFrom(editor, pos, index + 1);
+    let match = index === -1 ? null : getPairFrom(pairMap, rightSubStr, index);
+    if (skipBlank && match) {
+      moveFrom(editor, pos, index + match.length);
       return;
     }
 
     // right char is special
-    const rightChar = line.text[pos.character];
-    if (!skipBlank && pairSet.has(rightChar)) {
-      moveFrom(editor, pos, 1);
+    match = getPairFrom(pairMap, rightSubStr, 0);
+    if (!skipBlank && match) {
+      moveFrom(editor, pos, match.length);
       return;
     }
 
     // left char not special
-    const leftChar = line.text[pos.character - 1];
-    if (!pairSet.has(leftChar)) {
+    match = getPairFrom(pairMap, line.text, pos.character - 1, true);
+    if (!match) {
       vscode.commands.executeCommand("tab");
       return;
     }
 
     // right substr doesn't include special char
-    index = findFirstMatchingPairChar(rightSubStr, pairSet);
-    if (index === -1) {
+    const res = findFirstMatchingPair(rightSubStr, pairMap);
+    if (!res) {
       vscode.commands.executeCommand("tab");
       return;
     }
 
     // open: jump to right
     // close: jump to left
-    const matchChar = rightSubStr[index];
-    if (closeSet.has(matchChar)) {
-      moveFrom(editor, pos, index);
+    match = rightSubStr.substring(res.start, res.end);
+    if (closeSet.has(match)) {
+      moveFrom(editor, pos, res.start);
     } else {
-      moveFrom(editor, pos, index + 1);
+      moveFrom(editor, pos, res.end);
     }
   });
   context.subscriptions.push(taboutx);
@@ -130,11 +147,11 @@ export function activate(context: vscode.ExtensionContext) {
     }
 
     if (pos.character === 0) {
-      return gotoPrevLinePair(editor, pairSet, pos.line - 1);
+      return gotoPrevLinePair(editor, pairMap, pos.line - 1);
     }
 
     if (atLineHead(line.text, pos.character) && isMultiline) {
-      return gotoPrevLinePair(editor, pairSet, pos.line - 1);
+      return gotoPrevLinePair(editor, pairMap, pos.line - 1);
     }
 
     if (atLineHead(line.text, pos.character) && !isMultiline) {
@@ -142,36 +159,43 @@ export function activate(context: vscode.ExtensionContext) {
       return;
     }
 
+    // pair at left with blank in the middle
     const leftSubStr = line.text.substring(0, pos.character);
     let index = findLastPrintChar(leftSubStr);
-    if (skipBlank && index !== -1 && pairSet.has(leftSubStr[index])) {
-      moveFrom(editor, pos, index - leftSubStr.length);
+    let match = index === -1 ? null : getPairFrom(pairMap, leftSubStr, index, true);
+    if (skipBlank && match) {
+      moveFrom(editor, pos, index - leftSubStr.length - match.length + 1);
       return;
     }
 
-    const leftChar = line.text[pos.character - 1];
-    if (!skipBlank && pairSet.has(leftChar)) {
-      moveFrom(editor, pos, -1);
+    // pair closely at left
+    match = getPairFrom(pairMap, line.text, pos.character - 1, true);
+    if (!skipBlank && match) {
+      moveFrom(editor, pos, -match.length);
       return;
     }
 
-    const rightChar = line.text[pos.character];
-    if (!pairSet.has(rightChar)) {
+    // no pair closely at right
+    match = getPairFrom(pairMap, line.text, pos.character);
+    if (!match) {
       vscode.commands.executeCommand("outdent");
       return;
     }
 
-    index = findLastMatchingPairChar(leftSubStr, pairSet);
-    if (index === -1) {
+    // no pair in left substr
+    const res = findLastMatchingPairChar(leftSubStr, pairMap);
+    if (!res) {
       vscode.commands.executeCommand("outdent");
       return;
     }
 
-    const matchChar = leftSubStr[index];
-    if (openSet.has(matchChar)) {
-      moveFrom(editor, pos, index - leftSubStr.length + 1);
+    // pair in left substr
+    // open: jump to right; close: jump to left
+    match = leftSubStr.substring(res.start, res.end);
+    if (openSet.has(match)) {
+      moveFrom(editor, pos, res.end - leftSubStr.length);
     } else {
-      moveFrom(editor, pos, index - leftSubStr.length);
+      moveFrom(editor, pos, res.start - leftSubStr.length);
     }
   });
   context.subscriptions.push(taboutxBack);
@@ -182,22 +206,32 @@ function moveFrom(editor: vscode.TextEditor, pos: vscode.Position, offset: numbe
   editor.selection = new vscode.Selection(nextPos, nextPos);
 }
 
-function findFirstMatchingPairChar(text: string, set: Set<string>): number {
+function findFirstMatchingPair(
+  text: string,
+  pairMap: Map<number, Set<string>>
+): { start: number; end: number } | null {
   for (let i = 0; i < text.length; i++) {
-    if (set.has(text[i])) {
-      return i;
+    for (const [k, v] of pairMap) {
+      if (v.has(text.substring(i, i + k))) {
+        return { start: i, end: i + k };
+      }
     }
   }
-  return -1;
+  return null;
 }
 
-function findLastMatchingPairChar(text: string, set: Set<string>): number {
+function findLastMatchingPairChar(
+  text: string,
+  pairMap: Map<number, Set<string>>
+): { start: number; end: number } | null {
   for (let i = text.length - 1; i >= 0; i--) {
-    if (set.has(text[i])) {
-      return i;
+    for (const [k, v] of pairMap) {
+      if (v.has(text.substring(i, i + k))) {
+        return { start: i, end: i + k };
+      }
     }
   }
-  return -1;
+  return null;
 }
 
 function findFirstPrintChar(s: string): number {
@@ -218,53 +252,84 @@ function findLastPrintChar(s: string): number {
   return -1;
 }
 
-function findNextPrintChar(
-  editor: vscode.TextEditor,
-  startLine: number
-): { char: string; pos: vscode.Position } | null {
+function getPairFrom(
+  pairMap: Map<number, Set<string>>,
+  line: string,
+  start: number,
+  reverse = false
+): string {
+  for (const [k, v] of pairMap) {
+    let sub;
+    if (reverse) {
+      sub = line.substring(start - k + 1, start + 1);
+    } else {
+      sub = line.substring(start, start + k);
+    }
+    if (v.has(sub)) {
+      return sub;
+    }
+  }
+  return "";
+}
+
+function findNextPrintChar(editor: vscode.TextEditor, startLine: number): vscode.Position | null {
   const doc = editor.document;
   const totalLineNum = doc.lineCount;
   for (let l = startLine; l < totalLineNum; l++) {
     const lineText = doc.lineAt(l).text;
     const index = findFirstPrintChar(lineText);
     if (index !== -1) {
-      return { char: lineText[index], pos: new vscode.Position(l, index + 1) };
+      return new vscode.Position(l, index);
     }
   }
   return null;
 }
 
-function gotoNextLinePair(editor: vscode.TextEditor, pairSet: Set<string>, startLine: number) {
-  const res = findNextPrintChar(editor, startLine);
-  if (res && pairSet.has(res.char)) {
-    editor.selection = new vscode.Selection(res.pos, res.pos);
-    return;
+function gotoNextLinePair(
+  editor: vscode.TextEditor,
+  pairMap: Map<number, Set<string>>,
+  startLine: number
+) {
+  const pos = findNextPrintChar(editor, startLine);
+  if (pos) {
+    const line = editor.document.lineAt(pos.line).text;
+    const match = getPairFrom(pairMap, line, pos.character);
+    if (match) {
+      const newPos = pos.translate(0, match.length);
+      editor.selection = new vscode.Selection(newPos, newPos);
+      return;
+    }
   }
-
   vscode.commands.executeCommand("tab");
   return;
 }
 
-function findPrevPrintChar(
-  editor: vscode.TextEditor,
-  startLine: number
-): { char: string; pos: vscode.Position } | null {
+function findPrevPrintChar(editor: vscode.TextEditor, startLine: number): vscode.Position | null {
   const doc = editor.document;
   for (let l = startLine; l >= 0; l--) {
     const lineText = doc.lineAt(l).text;
     const index = findLastPrintChar(lineText);
     if (index !== -1) {
-      return { char: lineText[index], pos: new vscode.Position(l, index + 1) };
+      return new vscode.Position(l, index);
     }
   }
   return null;
 }
 
-function gotoPrevLinePair(editor: vscode.TextEditor, pairSet: Set<string>, startLine: number) {
-  const res = findPrevPrintChar(editor, startLine);
-  if (res && pairSet.has(res.char)) {
-    editor.selection = new vscode.Selection(res.pos, res.pos);
-    return;
+function gotoPrevLinePair(
+  editor: vscode.TextEditor,
+  pairMap: Map<number, Set<string>>,
+  startLine: number
+) {
+  const pos = findPrevPrintChar(editor, startLine);
+  if (pos) {
+    const line = editor.document.lineAt(pos.line).text;
+    const match = getPairFrom(pairMap, line, pos.character, true);
+    if (match) {
+      const newPos = pos.translate(0, 1);
+      editor.selection = new vscode.Selection(newPos, newPos);
+      return;
+    }
   }
 
   vscode.commands.executeCommand("outdent");

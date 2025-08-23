@@ -1,4 +1,3 @@
-import { reverse } from "dns";
 import * as vscode from "vscode";
 
 interface Pair {

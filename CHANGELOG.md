@@ -1,5 +1,9 @@
 # Change Log
 
+## [0.3.4] - 2025-08-23
+
+- Downgrade vscode version to 1.99.0.
+
 ## [0.3.2] - 2025-06-11
 
 ## Added

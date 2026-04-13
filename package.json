@@ -31,12 +31,12 @@
       {
         "command": "taboutx",
         "key": "tab",
-        "when": "editorTextFocus && !suggestWidgetVisible && !inlineSuggestionVisible  && !editorHasMultipleSelections && !inSnippetMode"
+        "when": "editorTextFocus && !inlineEditIsVisible && !suggestWidgetVisible && !inlineSuggestionVisible  && !editorHasMultipleSelections && !inSnippetMode"
       },
       {
         "command": "taboutxBack",
         "key": "shift+tab",
-        "when": "editorTextFocus && !suggestWidgetVisible && !inlineSuggestionVisible  && !editorHasMultipleSelections && !inSnippetMode"
+        "when": "editorTextFocus && !inlineEditIsVisible && !suggestWidgetVisible && !inlineSuggestionVisible  && !editorHasMultipleSelections && !inSnippetMode"
       }
     ],
     "configuration": {
